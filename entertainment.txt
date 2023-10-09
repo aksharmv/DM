@@ -1,0 +1,100 @@
+a) List the movies belonging to horror genre released in 2012 and having more than 2 directors
+
+
+db.movie.aggregate([
+{$match:
+	{genre:"horror",
+	year:2012}
+},
+{$addFields:
+	{dcount:{$size:"$director"}}
+},
+{$match:
+	{dcount:{$gt:1}}
+}])
+
+
+b) List the details of actors who acted in movies having the same titles but released before 2000 and after 2010
+
+
+db.movie.aggregate([
+{$lookup:
+	{from:"actor",
+	localField:"actor",
+	foreignField:"id",
+	as:"actors"}
+},
+{$group:
+	{_id:"$title",
+	years:{$addToSet:"$year"},
+	count:{$sum:1},
+	actors:{$addToSet:"$actors"}}
+},
+{$match:
+	{count:{$gt:1},
+	$or:[{years:{$lt:2000}},{years:{$gt:2010}}]}
+},
+{$project:
+	{"count":0,
+	"actors._id":0}
+}])
+
+
+c) List the details of production company producing maximum movies
+
+
+db.movie.aggregate([
+{$lookup:
+	{from:"pcompany",
+	localField:"pcompany",
+	foreignField:"name",
+	as:"pcom"}
+},
+{$group:
+	{_id:"$pcompany",
+	count:{$sum:1},
+	pc:{$addToSet:"$pcom"}}
+},
+{$sort:{count:-1}},
+{$limit:1},
+{$project:
+	{_id:0,
+	"pc._id":0}
+}])
+
+
+d) List the details of movies where the actor and director have the same date of birth
+
+
+db.movie.aggregate([
+{$lookup:
+	{from:"director",
+	localField:"director",
+	foreignField:"id",
+	as:"directors"}
+},
+{$lookup:
+	{from:"actor",
+	localField:"actor",
+	foreignField:"id",
+	as:"actors"}
+},
+{$match:
+	{$expr:
+		{$eq:["$actors.dob","$directors.dob"]}
+	}
+},
+{$project:
+	{_id:0,
+	"directors._id":0,
+	"actors._id":0}
+}])
+
+
+e) List the names of directors who directed all the movies produced by any one production company
+
+
+
+
+
+

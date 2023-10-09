@@ -1,0 +1,122 @@
+a)Retrieve the name of all professors who do not have an ongoing project of more than 100000
+
+
+var currentDate=new Date();
+db.project.aggregate([
+{$match:
+	{$and:[{end:{$gt:currentDate}},
+		{budget:{$lt:100000}}]}
+},
+{$lookup:
+	{from:"professor",
+	localField:"ci",
+	foreignField:"ssn",
+	as:"professors"}
+},
+{$lookup:
+	{from:"project",
+	localField:"pno",
+	foreignField:"pno",
+	as:"project"}
+},
+{$unwind:"$professors"},
+{$unwind:"$project"},
+{$project:
+	{_id:0,
+	"professors.name":1,
+	'project.end':1,
+	'project.budget':1}
+}])
+
+
+
+b)Retrieve the name of all students along with their professors under whom they work and project sponsor
+
+
+
+db.student.aggregate([
+{$lookup:
+	{from:"student",
+	localField:"usn",
+	foreignField:"usn",
+	as:"student"}
+},
+{$lookup:
+	{from:"professor",
+	localField:"supervisor",
+	foreignField:"ssn",
+	as:"professor"}
+},
+{$lookup:
+	{from:"project",
+	localField:"usn",	
+	foreignField:"ri",
+	as:"project"}
+},
+{$unwind:"$student"},
+{$unwind:"$professor"},
+{$unwind:"$project"},
+{$project:
+	{_id:0,
+	"student.name":1,
+	"professor.name":1,
+	"project.spnosor":1}
+}])
+
+
+
+c)List the professor and sum of budget of their projects started after 2005 but ended in 2010
+
+
+
+db.project.aggregate([
+{$match:
+	{$and:[{start:{$gte:ISODate("2006-01-01")}},
+		{end:{$gte:ISODate("2010-01-01"),$lt:ISODate("2011-01-01")}}
+	]}
+},
+{$lookup:
+	{from:"professor",localField:"ci",foreignField:"ssn",as:"professors"}
+},
+{$unwind:"$professors"},
+{$group:
+	{_id:"$professors.name",totalbudget:{$sum:{$toInt:"$budget"}}}
+},
+{$project:
+	{_id:0,professorName:"$_id",totalbudget:1}
+}])
+
+
+
+d)List the name of the professors who have a total worth of projects greater than average budget of projects
+
+
+db.project.aggregate([
+{$unwind:"$ci"},
+{$group:
+	{_id:"$ci",
+	totalBudget:{$sum:{$toDouble:"$budget"}},
+	avgBudget:{$avg:{$toDouble:"$budget"}}}
+},
+{$lookup:
+	{from:"professor",
+	localField:"_id",
+	foreignField:"ssn",
+	as:"professors"}
+},
+{$unwind:"$professors"},
+{$match:
+	{$expr:{$gt:["$totalBudget","$avgBudget"]}}
+},
+{$project:
+	{_id:0,
+	totalBudget:1,
+	"professors":1}
+}])
+
+
+
+e)List the professors who work on all the projects
+
+
+var allProjects=db.project.distinct("pno"); db.professor.aggregate([{$lookup:{from:"project",localField:"ssn",foreignField:"ci",as:"projects"}},{$match:{"projects.pno":{$all:allProjects}}},{$project:{_id:0,"name":1}}])s
