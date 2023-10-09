@@ -1,6 +1,9 @@
 a)Retrieve the name of all professors who do not have an ongoing project of more than 100000
 
 
+select p.* from professor p inner join professor_project pp on pp.ci=p.ssn inner join project pr on pp.pno=pr.pno where pr.budget>100000 and pr.end>now();
+
+
 var currentDate=new Date();
 db.project.aggregate([
 {$match:
@@ -32,6 +35,8 @@ db.project.aggregate([
 
 b)Retrieve the name of all students along with their professors under whom they work and project sponsor
 
+
+select s.*,p.name,pr.sponsor from student s inner join student_project sp on s.SSN=sp.sssn inner join professor p on sp.pssn=p.SSN inner join project pr on pr.pno=sp.pno;
 
 
 db.student.aggregate([
@@ -68,6 +73,8 @@ db.student.aggregate([
 c)List the professor and sum of budget of their projects started after 2005 but ended in 2010
 
 
+select p.SSN,p.name,sum(pr.budget) from professor p inner join professor_project pp on p.SSN=pp.ci inner join project pr on pr.pno=pp.pno where pr.start>"2005-01-01" and pr.end like "2010%" group by p.SSN;
+
 
 db.project.aggregate([
 {$match:
@@ -89,6 +96,9 @@ db.project.aggregate([
 
 
 d)List the name of the professors who have a total worth of projects greater than average budget of projects
+
+
+select p.*,sum(pr.budget) from professor p inner join professor_project pp on p.SSN=pp.ci inner join project pr on pr.pno=pp.pno group by p.SSN having sum(pr.budget)>(select avg(budget) from project);
 
 
 db.project.aggregate([
@@ -119,4 +129,7 @@ db.project.aggregate([
 e)List the professors who work on all the projects
 
 
-var allProjects=db.project.distinct("pno"); db.professor.aggregate([{$lookup:{from:"project",localField:"ssn",foreignField:"ci",as:"projects"}},{$match:{"projects.pno":{$all:allProjects}}},{$project:{_id:0,"name":1}}])s
+select p.* from professor p inner join professor_project pp on pp.ci=p.SSN inner join project pr on pr.pno=pp.pno group by p.SSN having count(*)>=all(select count(*) from project);
+
+
+var allProjects=db.project.distinct("pno"); db.professor.aggregate([{$lookup:{from:"project",localField:"ssn",foreignField:"ci",as:"projects"}},{$match:{"projects.pno":{$all:allProjects}}},{$project:{_id:0,"name":1}}])
